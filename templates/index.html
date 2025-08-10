@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>IRIS API</title>
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+        <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='asset/iris_logo.ico') }}">
+        <style>
+            :root {
+                --nord0: #2E3440; /* Polar Night */
+                --nord1: #3B4252;
+                --nord2: #434C5E;
+                --nord3: #4C566A;
+                --nord4: #D8DEE9; /* Snow Storm */
+                --nord5: #E5E9F0;
+                --nord6: #ECEFF4;
+                --nord7: #8FBCBB; /* Frost */
+                --nord8: #88C0D0;
+                --nord9: #81A1C1;
+                --nord10: #5E81AC;
+                --nord11: #BF616A; /* Aurora */
+                --nord12: #D08770;
+                --nord13: #ad9566;
+                --nord14: #A3BE8C;
+                --nord15: #8f6f89;
+            }
+
+            body { font-family: 'Inter', sans-serif; }
+            .font-dancing-script { font-family: 'Dancing Script', cursive; }
+
+            /* Styles for Markdown content within .prose */
+            .prose {
+                color: var(--nord4); /* Default text color */
+            }
+            .prose h1 {
+                font-size: 2.2em; /* Larger for H1 */
+                font-weight: 700;
+                color: var(--nord13); /* A bit more prominent color */
+                border-bottom: 2px solid var(--nord3);
+                margin-top: 15px;
+                margin-bottom: 1em;
+            }
+            .prose h2 {
+                font-size: 1.8em; /* H2 size */
+                font-weight: 600;
+                color: var(--nord15);
+                border-bottom: 1px solid var(--nord3);
+                margin-top: 15px;
+                margin-bottom: 0.8em;
+            }
+            .prose h3 {
+                font-size: 1.4em; /* H3 size */
+                font-weight: 600;
+                color: var(--nord8);
+                margin-top: 15px;
+                margin-bottom: 0.6em;
+            }
+            .prose h4,
+            .prose h5,
+            .prose h6 {
+                font-size: 1.2em; /* Smaller headings */
+                font-weight: 600;
+                color: var(--nord7);
+                margin-top: 15px;
+                margin-bottom: 0.5em;
+            }
+            .prose a {
+                color: var(--nord9); /* Link color */
+                text-decoration: none;
+            }
+            .prose a:hover {
+                color: var(--nord10);
+                text-decoration: underline;
+            }
+            .prose strong {
+                color: var(--nord6);
+            }
+            .prose code {
+                /*background-color: var(--nord1); /* Inline code background */
+                color: var(--nord4); /* Inline code text */
+                padding: 0.2em 0.4em;
+                border-radius: 0.3em;
+            }
+            .prose pre {
+                background-color: var(--nord0); /* Code block background */
+                color: var(--nord4); /* Code block text */
+                padding: 1em;
+                margin-top: 10px;
+                margin-bottom: 10px;
+                border-radius: 0.5em;
+                overflow-x: auto;
+            }
+            .prose blockquote {
+                color: var(--nord4);
+                border-left: 4px solid var(--nord7);
+                padding-left: 1em;
+                margin-left: 0;
+                font-style: italic;
+            }
+            .prose ul,
+            .prose ol {
+                color: var(--nord4);
+                padding-left: 1.5em;
+            }
+            .prose li::marker {
+                color: var(--nord8); /* List marker color */
+            }
+            .prose table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 1em;
+            }
+            .prose th,
+            .prose td {
+                border: 1px solid var(--nord3);
+                padding: 0.5em;
+                text-align: left;
+            }
+            .prose th {
+                background-color: var(--nord2);
+                color: var(--nord6);
+            }
+
+            .overflow-y-auto::-webkit-scrollbar {
+                width: 8px;
+            }
+            .overflow-y-auto::-webkit-scrollbar-thumb {
+                background-color: #cbd5e1;
+                border-radius: 4px;
+            }
+            .overflow-y-auto::-webkit-scrollbar-track {
+                background-color: #f1f5f9;
+            }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    </head>
+    <body class="bg-gradient-to-br from-indigo-50 to-purple-50 min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105 text-center">
+            <img src="{{ url_for('static', filename='asset/iris_logo.png') }}" alt="Iris Logo" class="mx-auto h-24 mb-6">
+            <h1 class="text-3xl font-extrabold text-center mb-6 font-dancing-script" style="color: rgba(77, 122, 231, 1)">IRIS</h1>
+            
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Public APIs</h2>
+            <div class="space-y-4">
+                {% if public_apis %}
+                    {% for api in public_apis %}
+                        <div class="bg-white p-4 rounded-lg shadow-md flex items-center justify-between border border-gray-250">
+                            <a href="#" data-action="open-api-details-modal" data-script-name="{{ api.id }}" class="font-semibold text-gray-800 text-lg hover:text-blue-600">{{ api.id }}</a>
+                            <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full 
+                                         {% if api.is_online %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ 'Online' if api.is_online else 'Offline' }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-gray-600">No public APIs found.</p>
+                {% endif %}
+            </div>
+
+            {% if private_apis %}
+            <h2 class="text-2xl font-bold text-gray-800 mt-8 mb-4">Private APIs</h2>
+            <div class="space-y-4">
+                {% for api in private_apis %}
+                    <div class="bg-white p-4 rounded-lg shadow-md flex items-center justify-between border border-gray-250">
+                        <a href="#" data-action="open-api-details-modal" data-script-name="{{ api.id }}" class="font-semibold text-gray-800 text-lg hover:text-blue-600">{{ api.id }}</a>
+                        <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full 
+                                     {% if api.is_online %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                            {{ 'Online' if api.is_online else 'Offline' }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <!-- Generic Modal Structure -->
+        <div id="generic-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 h-full w-full flex items-center justify-center" style="display: none;">
+            <div class="relative p-8 bg-white w-full max-w-3xl mx-auto rounded-lg shadow-lg max-h-[80vh] overflow-y-auto" id="generic-modal-content">
+                <!-- Form will be loaded here -->
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const genericModal = document.getElementById('generic-modal');
+                const genericModalContent = document.getElementById('generic-modal-content');
+
+                // Make closeModal globally available for the modal's close button
+                window.closeModal = () => {
+                    genericModal.style.display = 'none';
+                    genericModalContent.innerHTML = ''; // Clear content
+                };
+
+                // Make a generic modal opener globally available
+                window.openGenericModal = async (url) => {
+                    try {
+                        const response = await fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        const html = await response.text();
+                        genericModalContent.innerHTML = html;
+                        genericModal.style.display = 'flex';
+                        // Re-attach event listeners for the form inside the modal
+                        attachEventListeners(genericModalContent); 
+                        
+                        // Call the Markdown rendering function after content is loaded
+                        renderApiDocInModal();
+
+                    } catch (error) {
+                        console.error('Error loading form into modal:', error);
+                        // Optionally show a flash message or error in the modal
+                    }
+                };
+
+                // Function to render Markdown content in the modal
+                function renderApiDocInModal() {
+                    const docContentElement = document.getElementById('documentation-content');
+                    if (docContentElement) {
+                        const rawDoc = docContentElement.textContent; // Récupère le texte brut
+                        if (rawDoc.trim() !== '') {
+                            docContentElement.innerHTML = marked.parse(rawDoc);
+                        }
+                    }
+                }
+
+                // Function to attach event listeners to newly loaded content
+                function attachEventListeners(element) {
+                    // Attach click listeners for API details modal links
+                    element.querySelectorAll('a[data-action="open-api-details-modal"]').forEach(link => {
+                        link.removeEventListener('click', handleOpenApiDetailsModalClick); // Prevent duplicate listeners
+                        link.addEventListener('click', handleOpenApiDetailsModalClick);
+                    });
+
+                    // Attach listener for modal close buttons (the 'X')
+                    element.querySelectorAll('button[onclick="closeModal()"]').forEach(button => {
+                        button.removeEventListener('click', window.closeModal); // Prevent duplicates
+                        button.addEventListener('click', window.closeModal);
+                    });
+                }
+
+                // Handler for opening API details modal
+                function handleOpenApiDetailsModalClick(e) {
+                    e.preventDefault();
+                    const scriptName = e.target.dataset.scriptName;
+                    if (scriptName) {
+                        window.openGenericModal(`/details/${scriptName}`);
+                    }
+                }
+
+                // Initial attachment of event listeners for the index page
+                attachEventListeners(document);
+            });
+        </script>
+    </body>
+    </html>

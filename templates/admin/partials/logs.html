@@ -1,0 +1,35 @@
+<h2 class="text-3xl font-bold text-gray-800 mb-6">System Logs</h2>
+
+<div class="mb-6">
+    <div class="sm:hidden">
+        <label for="tabs" class="sr-only">Select a tab</label>
+        <select id="tabs" name="tabs" class="block w-full focus:ring-indigo-500 focus:border-indigo-500 border-gray-300 rounded-md">
+            <option data-path="{{ url_for('admin.logs_content', log_type='system') }}" {% if log_type == 'system' %}selected{% endif %}>System</option>
+            <option data-path="{{ url_for('admin.logs_content', log_type='web') }}" {% if log_type == 'web' %}selected{% endif %}>Web</option>
+            <option data-path="{{ url_for('admin.logs_content', log_type='api') }}" {% if log_type == 'api' %}selected{% endif %}>API</option>
+            <option data-path="{{ url_for('admin.logs_content', log_type='socket') }}" {% if log_type == 'socket' %}selected{% endif %}>Socket</option>
+        </select>
+    </div>
+    <div class="hidden sm:block">
+        <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                <a href="#" data-path="{{ url_for('admin.logs_content', log_type='system') }}" class="{{ 'border-indigo-500 text-indigo-600' if log_type == 'system' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    System
+                </a>
+                <a href="#" data-path="{{ url_for('admin.logs_content', log_type='web') }}" class="{{ 'border-indigo-500 text-indigo-600' if log_type == 'web' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Web
+                </a>
+                <a href="#" data-path="{{ url_for('admin.logs_content', log_type='api') }}" class="{{ 'border-indigo-500 text-indigo-600' if log_type == 'api' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    API
+                </a>
+                <a href="#" data-path="{{ url_for('admin.logs_content', log_type='socket') }}" class="{{ 'border-indigo-500 text-indigo-600' if log_type == 'socket' else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }} whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
+                    Socket
+                </a>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<div id="log-content">
+    {% include 'admin/partials/logs_' + log_type + '.html' %}
+</div>

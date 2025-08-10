@@ -1,0 +1,35 @@
+
+<img src="{{ url_for('static', filename='asset/iris_logo.png') }}" alt="Iris Logo" class="mx-auto h-24 mb-6">
+<h1 class="text-3xl font-extrabold text-center mb-6 font-dancing-script" style="color: rgba(77, 122, 231, 1)">IRIS</h1>
+
+<h2 class="text-2xl font-bold text-gray-800 mb-4">API: {{ script_name }}</h2>
+
+{% if api.description %}
+<div class="mt-4 text-left">
+    <h3 class="text-xl font-semibold text-gray-700 mb-2">Description:</h3>
+    <p class="text-gray-600">{{ api.description }}</p>
+</div>
+{% endif %}
+
+{% if api.doc %}
+<div class="mt-4 text-left">
+    <h3 class="text-xl font-semibold text-gray-700 mb-2">Documentation:</h3>
+    <div id="documentation-content" class="prose max-w-none p-4 bg-gray-50 rounded-lg shadow-inner text-gray-800">{{ api.doc }}</div>
+</div>
+{% endif %}
+
+<h3 class="text-xl font-semibold text-gray-700 mb-3 mt-3">Required Parameters:</h3>
+<div class="space-y-2">
+    {% if parameters %}
+        {% for param in parameters %}
+            <div class="bg-gray-100 p-3 rounded-lg flex justify-between items-center">
+                <span class="font-medium text-gray-800">{{ param.name }}</span>
+                <span class="text-sm text-gray-600">({{ param.type }})</span>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-gray-600">This API requires no parameters.</p>
+    {% endif %}
+</div>
+<button type="button" onclick="closeModal()" class="mt-6 inline-block bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition duration-300">Back to API Status</button>
+</div>
