@@ -42,9 +42,11 @@ class User(db.Model):
 class ApiScript(db.Model):
     id = db.Column(db.String(100), primary_key=True)
     description = db.Column(db.Text, nullable=True) # New field
+    path = db.Column(db.Text, nullable=True) # New field
     doc = db.Column(db.Text, nullable=True) # New field
     is_public = db.Column(db.Boolean, default=True, nullable=False)
     is_online = db.Column(db.Boolean, default=False, nullable=False) # Changé à False
+    environment_vars = db.Column(db.JSON, nullable=True) # New field for script-specific environment variables
 
     # Relationship for tokens that can access this script
     tokens_with_access = db.relationship('ApiToken', secondary=token_api_association, lazy='subquery',
@@ -58,6 +60,7 @@ class ApiToken(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     token_type = db.Column(db.String(20), nullable=False, default='app') # 'universal' or 'app'
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False) # Link to the user who created it
+    environment_vars = db.Column(db.JSON, nullable=True) # New field for token-specific environment variables
 
 class LogSystem(db.Model):
     id = db.Column(db.Integer, primary_key=True)

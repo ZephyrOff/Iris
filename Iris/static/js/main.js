@@ -83,7 +83,19 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleFormSubmit(event) {
         event.preventDefault();
         const form = event.target;
-        const formData = new FormData(form);
+        let formData;
+        if (form.id === 'env-vars-form') {
+            formData = new FormData();
+            formData.append('script_id', form.querySelector('#env-vars-script-id').value);
+            const keys = form.querySelectorAll('input[name="env_keys[]"]');
+            const values = form.querySelectorAll('input[name="env_values[]"]');
+            keys.forEach((keyInput, index) => {
+                formData.append('env_keys[]', keyInput.value);
+                formData.append('env_values[]', values[index].value);
+            });
+        } else {
+            formData = new FormData(form);
+        }
 
         try {
             const response = await fetch(form.action, {
@@ -108,7 +120,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const targetElement = document.getElementById(form.dataset.updateTarget);
                     if (targetElement) {
                         targetElement.outerHTML = result.html;
-                        attachEventListeners(document.getElementById(form.dataset.updateTarget));
+                        const updateTarget = document.getElementById(form.dataset.updateTarget)
+                        if (updateTarget!==null){
+                            console.log(updateTarget);
+                            attachEventListeners(updateTarget);
+                        }
                         updateActiveNavLink(); // Call to update active link
                     }
                 } else if (result.redirect_url) {
@@ -181,8 +197,8 @@ document.addEventListener('DOMContentLoaded', () => {
             window.toggleApiSelection();
         }
 
-        // Attach listener for modal close buttons (the 'X')
-        element.querySelectorAll('button[onclick="closeModal()"]').forEach(button => {
+        // Attach listener for modal close buttons (the 'X' and data-dismiss)
+        element.querySelectorAll('button[onclick="closeModal()"], button[data-dismiss="modal"]').forEach(button => {
             button.removeEventListener('click', window.closeModal); // Prevent duplicates
             button.addEventListener('click', window.closeModal);
         });
@@ -203,6 +219,21 @@ document.addEventListener('DOMContentLoaded', () => {
             select.removeEventListener('change', handlePerPageChange); // Prevent duplicate listeners
             select.addEventListener('change', handlePerPageChange);
         });
+
+        // Environment Variables Modal specific listeners
+        const envVarsContainer = element.querySelector('#env-vars-container');
+        if (envVarsContainer) {
+            // Add Variable button
+            const addEnvVarButton = element.querySelector('#add-env-var');
+            if (addEnvVarButton) {
+                addEnvVarButton.removeEventListener('click', addEnvironmentVariableRow);
+                addEnvVarButton.addEventListener('click', addEnvironmentVariableRow);
+            }
+
+            // Remove Variable buttons (delegated event listener)
+            envVarsContainer.removeEventListener('click', handleRemoveEnvironmentVariable);
+            envVarsContainer.addEventListener('click', handleRemoveEnvironmentVariable);
+        }
     }
 
     function handlePerPageChange(e) {
@@ -279,6 +310,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (action === 'edit-api-script') {
             const scriptId = e.target.dataset.scriptId;
             window.openGenericModal(`/admin/api-scripts/${scriptId}/edit-content`);
+        } else if (action === 'edit-environment-vars') {
+            const scriptId = e.target.dataset.scriptId;
+            window.openGenericModal(`/admin/api-scripts/${scriptId}/environment-vars`);
+        } else if (action === 'edit-token-environment-vars') {
+            const tokenId = e.target.dataset.tokenId;
+            window.openGenericModal(`/admin/token/${tokenId}/environment-vars`);
         }
     }
 
@@ -328,6 +365,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const html = await response.text();
             genericModalContent.innerHTML = html;
             genericModal.style.display = 'flex';
+
+            // Populate script_id and script_name for environment vars modal
+            const scriptIdInput = genericModalContent.querySelector('#env-vars-script-id');
+            const scriptNameSpan = genericModalContent.querySelector('#env-vars-script-name');
+            if (scriptIdInput && scriptNameSpan) {
+                const urlParts = url.split('/');
+                const scriptId = urlParts[urlParts.length - 2]; // Assuming URL is /admin/api-scripts/{script_id}/environment-vars
+                scriptIdInput.value = scriptId;
+                scriptNameSpan.textContent = scriptId; // Display script ID as name
+            }
 
             const codeBlock = genericModalContent.querySelector('pre code.language-json');
             if (codeBlock) {
@@ -389,10 +436,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Function to toggle visibility of API token
     window.toggleTokenVisibility = (element) => {
         const fullToken = element.dataset.fullToken;
-        if (element.textContent.trim() === '********-****-****-****-************') {
+        const maskToken = element.dataset.maskToken || '********-****-****-****-************';
+        
+        if (element.textContent.trim() === maskToken) {
             element.textContent = fullToken;
         } else {
-            element.textContent = '********-****-****-****-************';
+            element.textContent = maskToken;
         }
     };
 
@@ -407,6 +456,35 @@ document.addEventListener('DOMContentLoaded', () => {
             return uri + separator + key + "=" + value;
         }
     };
+
+    // Function to add a new environment variable row
+    function addEnvironmentVariableRow() {
+        const container = document.getElementById('env-vars-container');
+        const newRow = document.createElement('div');
+        newRow.className = 'flex space-x-2 env-var-row';
+        newRow.innerHTML = `
+            <input type="text" name="env_keys[]" class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Key">
+            <input type="text" name="env_values[]" class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Value">
+            <button type="button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline remove-env-var">X</button>
+        `;
+        container.appendChild(newRow);
+    }
+
+    // Function to handle removing an environment variable row
+    function handleRemoveEnvironmentVariable(event) {
+        if (event.target.classList.contains('remove-env-var')) {
+            // Ensure there's at least one row left
+            const container = document.getElementById('env-vars-container');
+            if (container.children.length > 1) {
+                event.target.closest('.env-var-row').remove();
+            } else {
+                // Optionally, clear the inputs if it's the last row instead of removing
+                const row = event.target.closest('.env-var-row');
+                row.querySelector('input[name="env_keys[]"]').value = '';
+                row.querySelector('input[name="env_values[]"]').value = '';
+            }
+        }
+    }
 
     // Get elements
     const userMenuButton = document.getElementById('user-menu-button');

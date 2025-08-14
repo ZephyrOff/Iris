@@ -162,28 +162,111 @@ Authorization: Bearer VOTRE_JETON_API_ICI
 
 *(Une documentation API plus détaillée serait généralement générée ou fournie séparément pour une API de production.)*
 
+## Variables d'Environnement pour les Scripts et les Jetons API
+
+Iris permet de définir des variables d'environnement spécifiques pour chaque script API et chaque jeton API. Ces variables sont accessibles au moment de l'exécution du script via le contexte de l'environnement.
+
+### Définition des Variables d'Environnement
+
+Les variables d'environnement peuvent être définies via le panneau d'administration :
+
+*   **Pour les Scripts API** : Dans la section "API Scripts", cliquez sur le bouton "Env Vars" à côté du script souhaité.
+*   **Pour les Jetons API** : Dans la section "API Tokens", cliquez sur le bouton "Env Vars" à côté du jeton souhaité.
+
+Une modale s'ouvrira, vous permettant d'ajouter, de modifier ou de supprimer des paires clé-valeur. Ces variables seront stockées sous forme de JSON dans la base de données.
+
+### Accès aux Variables d'Environnement dans un Script API
+
+Dans votre script API (fichier `.py` dans le répertoire `fabric/`), vous pouvez récupérer l'instance de l'environnement actuel et accéder à ces variables.
+
+L'instance de l'environnement (`api_context`) contient les variables d'environnement définies pour le script *et* pour le jeton utilisé, avec les variables du jeton ayant priorité en cas de conflit de clés.
+
+```python
+from core.decorator import entrypoint
+from core.environment_manager import get_environment
+
+@entrypoint
+def mon_script_api(param1, param2):
+    # Récupérer l'instance de l'environnement
+    api_context = get_environment()
+
+    # Accéder aux variables d'environnement
+    # api_context.environment_vars est un dictionnaire
+    ma_variable_script = api_context.script_environment_vars.get("MA_VARIABLE_SCRIPT", "valeur_par_defaut_script")
+    ma_variable_token = api_context.token_environment_vars.get("MA_VARIABLE_TOKEN", "valeur_par_defaut_token")
+
+    # Exemple d'utilisation
+    message = f"Script exécuté avec: {param1}, {param2}. " \
+              f"Variable script: {ma_variable_script}. " \
+              f"Variable token: {ma_variable_token}."
+
+    # Vous pouvez aussi accéder à d'autres informations du contexte API
+    # par exemple, les détails de la requête HTTP
+    # request_method = api_context.request.method
+    # request_path = api_context.request.path
+
+    return {"status": "success", "message": message}
+```
+
+`script_environment_vars` permet d'accéder aux variables configurées au niveau de l'api
+
+`token_environment_vars` permet d'accéder aux variables configurées au niveau du token
+
+`token` permet d'accéder au token utilisé
+
+`username` permet d'accéder au nom d'utilisateur si celui-ci est connecté
+
+
+
 ## Panneau d'Administration
 
-Le panneau d'administration fournit une interface web pour gérer l'application. Il est accessible à l'adresse `/admin` et nécessite une connexion utilisateur.
+<p align="center">
+  <img src="assets/admin_panel.png" alt="logo"/>
+</p>
+
+Le panneau d'administration fournit une interface web complète pour gérer l'application. Il est accessible à l'adresse `/admin` et nécessite une connexion utilisateur.
 
 **Identifiants par défaut (à modifier via le panneau d'administration après la première connexion) :**
 *   Nom d'utilisateur : `admin`
 *   Mot de passe : `password`
 
-**Fonctionnalités clés de l'administration :**
-*   **Tableau de bord** : Aperçu de l'état du système.
-*   **Gestion des utilisateurs** : Créer, modifier et supprimer des comptes utilisateurs.
-*   **Gestion des jetons API** : Générer, révoquer et gérer les jetons API pour les utilisateurs.
-*   **Gestion des scripts API** : Activer/désactiver des scripts, définir leur visibilité (public/non-public).
-*   **Visionneuse de journaux** : Consulter divers journaux d'application (API, système, web, socket).
-*   **Gestion des adresses IP bannies** : Consulter et gérer les adresses IP bannies par le système `auto_protect`.
+### Pages et Fonctionnalités du Panneau d'Administration
+
+*   **Tableau de Bord (`/admin`)** :
+    *   Aperçu général de l'état du système.
+    *   Fournit un accès rapide aux principales sections de gestion.
+
+*   **Gestion des Utilisateurs ** :
+    *   **Création d'utilisateurs** : Ajouter de nouveaux comptes utilisateurs avec des rôles spécifiques (admin/utilisateur).
+    *   **Modification d'utilisateurs** : Mettre à jour les informations des utilisateurs existants, y compris le nom d'utilisateur, l'e-mail, le rôle et les permissions d'accès aux API.
+    *   **Suppression d'utilisateurs** : Retirer des comptes utilisateurs du système.
+    *   **Activation/Désactivation** : Contrôler l'état actif des comptes utilisateurs.
+
+*   **Gestion des Jetons API (section Tokens)** :
+    *   **Création de jetons** : Générer de nouveaux jetons API (de type `app` ou `universal`).
+    *   **Modification de jetons** : Mettre à jour la description, l'état d'activité et les permissions des jetons existants.
+    *   **Variables d'Environnement des Jetons** : Définir des paires clé-valeur spécifiques à chaque jeton, accessibles dans les scripts API.
+    *   **Activation/Désactivation** : Contrôler l'état actif des jetons API.
+    *   **Suppression de jetons** : Retirer des jetons API du système.
+
+*   **Gestion des Scripts API (section Scripts)** :
+    *   **Visibilité** : Définir si un script est `public` (accessible sans jeton) ou `non-public` (nécessite un jeton).
+    *   **État en ligne** : Activer ou désactiver un script API, le rendant disponible ou non pour les requêtes.
+    *   **Variables d'Environnement des Scripts** : Définir des paires clé-valeur spécifiques à chaque script, accessibles dans les scripts API.
+
+*   **Visionneuse de Journaux** :
+    *   Consulter les journaux d'activité de l'application, classés par type (système, web, API, socket).
+    *   Permet de filtrer les journaux pour faciliter le débogage et la surveillance.
+
+*   **Gestion des Adresses IP Bannies** :
+    *   Consulter la liste des adresses IP actuellement bannies par le système `auto_protect`.
+    *   Permet de dé-bannir manuellement des adresses IP.
 
 ## Structure du Projet
 
 *   `app.py` : Le point d'entrée principal de l'application Flask.
 *   `requirements.txt` : Liste toutes les dépendances Python.
 *   `settings.yaml` : Fichier de configuration de l'application.
-*   `test_api.py` : Exemple de fichier de test pour l'API.
 *   `core/` : Contient la logique principale de l'application telle que l'authentification, la configuration, la gestion des erreurs, la journalisation et les décorateurs.
 *   `fabric/` : Contient les scripts API exécutables par le worker (par exemple, `salutation.py`, `test_worker.py`).
 *   `instance/` : Stocke les données spécifiques à l'instance, y compris la base de données SQLite (`hub.db`).

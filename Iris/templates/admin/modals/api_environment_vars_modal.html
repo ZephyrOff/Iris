@@ -1,0 +1,36 @@
+<div class="px-6 py-4 flex justify-between items-center border-b border-gray-200">
+    <h3 class="text-xl font-semibold text-gray-800">Environment Variables for <span id="env-vars-script-name" class="font-bold text-indigo-600"></span></h3>
+    <button type="button" class="text-gray-400 hover:text-gray-600 focus:outline-none text-2xl" data-dismiss="modal" aria-label="Close">
+        &times;
+    </button>
+</div>
+<div class="p-6">
+    <form id="env-vars-form" data-form-ajax data-update-target="api-scripts-table-wrapper" method="post" action="{% if modal_type=='script' %}{{ url_for('admin.save_script_environment_vars', script_id=script_id) }}{% else %}{{ url_for('admin.save_token_environment_vars', token_id=script_id) }}{% endif %}">
+        <input type="hidden" name="script_id" id="env-vars-script-id">
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Variables:</label>
+            <div id="env-vars-container" class="space-y-3">
+                {% if environment_vars %}
+                    {% for key, value in environment_vars.items() %}
+                        <div class="flex items-center space-x-2 env-var-row">
+                            <input type="text" name="env_keys[]" class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Key" value="{{ key }}">
+                            <input type="text" name="env_values[]" class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Value" value="{{ value }}">
+                            <button type="button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline remove-env-var">X</button>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="flex items-center space-x-2 env-var-row">
+                        <input type="text" name="env_keys[]" class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Key">
+                        <input type="text" name="env_values[]" class="shadow appearance-none border rounded w-1/2 py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" placeholder="Value">
+                        <button type="button" class="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline remove-env-var">X</button>
+                    </div>
+                {% endif %}
+            </div>
+            <button type="button" id="add-env-var" class="font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline mt-4 button-add">Add Variable</button>
+        </div>
+        <div class="flex justify-end pt-4 border-t border-gray-200">
+            <button type="button" class="font-bold py-2 px-4 rounded mr-2 focus:outline-none focus:shadow-outline button-cancel" data-dismiss="modal">Cancel</button>
+            <button type="submit" class="font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline button-save">Save changes</button>
+        </div>
+    </form>
+</div>

@@ -1,12 +1,15 @@
 import __main__
 import os
 import ast
+import json
 from flask import Blueprint, request, render_template, redirect, url_for, flash, make_response, jsonify
 from models.database import db, ApiScript, ApiToken, User, LogSystem, LogWeb, LogApi, LogSocket
 from core.auth import generate_token, auth_required
 from views.utils import construct_context
 from core.logging import logs, flash_notification
 from datetime import datetime, timedelta
+from core.fabric import refresh_db
+
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -83,18 +86,7 @@ def dashboard_content():
         logs(f'Récupération du contenu du dashboard', status='debug', component='web', request_info=request.url)
 
     # Synchroniser les scripts du dossier fabric avec la DB
-    scripts_in_db = {s.id for s in ApiScript.query.all()}
-    scripts_in_fs = {f.replace('.py', '') for f in os.listdir(FABRIC_DIR) if f.endswith('.py') and f != 'core.py'}
-    
-    for script_name in scripts_in_fs - scripts_in_db:
-        new_script = ApiScript(id=script_name, is_online=False) # New scripts are offline by default
-        db.session.add(new_script)
-    
-    for script_name in scripts_in_db - scripts_in_fs:
-        script_to_delete = ApiScript.query.get(script_name)
-        db.session.delete(script_to_delete)
-        
-    db.session.commit()
+    refresh_db(FABRIC_DIR)
 
     context = construct_context()
 
@@ -172,6 +164,45 @@ def edit_api_script(script_id):
     logs(f"API Script {script_id} updated successfully.", status='success', component='web')
     return jsonify(success=True, message='API Script updated successfully!')
 
+@admin_bp.route('/api-scripts/<script_id>/environment-vars', methods=['GET'])
+@auth_required(required_roles=['admin'])
+def get_environment_vars_form(script_id):
+    script = ApiScript.query.get_or_404(script_id)
+    # Pass the dictionary directly to the template
+    environment_vars = script.environment_vars if script.environment_vars else {}
+    return render_template('admin/modals/api_environment_vars_modal.html', script_id=script_id, environment_vars=environment_vars, modal_type="script")
+
+@admin_bp.route('/api-scripts/<script_id>/environment-vars', methods=['POST'])
+@auth_required(required_roles=['admin'])
+def save_script_environment_vars(script_id):
+    try:
+        script = ApiScript.query.get_or_404(script_id)
+        
+        env_keys = request.form.getlist('env_keys[]')
+        env_values = request.form.getlist('env_values[]')
+        
+        new_environment_vars = {}
+        for i in range(len(env_keys)):
+            key = env_keys[i].strip()
+            value = env_values[i].strip()
+            if key: # Only add if key is not empty
+                new_environment_vars[key] = value
+        
+        script.environment_vars = new_environment_vars if new_environment_vars else None
+        
+        db.session.commit()
+        flash_notification(f"Variables d'environnements pour {script_id} mise à jour", 'success')
+        logs(f"Variables d'environnements pour {script_id} mise à jour", status='success', component='web')
+        
+        context = construct_context()
+        html = render_template('admin/partials/_api_scripts_table.html', **context)
+        return jsonify(success=True, html=html)
+
+    except Exception as e:
+        flash_notification(f"Erreur lors de la sauvegarde des variables d'environnements: {e}", 'danger')
+        logs(f"Erreur lors de la sauvegarde des variables d'environnements pour le script {script_id}: {e}", status='error', component='web')
+        return jsonify(success=False, message=f"Erreur lors de la sauvegarde des variables d'environnements: {e}")
+
 @admin_bp.route('/token/create-form', methods=['GET'])
 @auth_required(required_roles=['admin', 'user'])
 def create_token_form():
@@ -226,8 +257,9 @@ def create_token():
         invalid_apis = [api_id for api_id in selected_api_ids if api_id not in allowed_api_ids]
         if invalid_apis:
             flash(f"Vous n'avez pas les droits de créer un token pour {', '.join(invalid_apis)}", 'danger')
-            logs(f"Création d'un token: L'utilisateur n'a pas les droits de créer un token pour {', '.join(invalid_apis)}", status='error', component='web', request_info=request.url)
-            return jsonify(success=False, message=f'You do not have permission to create tokens for: {', '.join(invalid_apis)}')
+            invalid_api_list = ', '.join(invalid_apis)
+            logs(f"Création d'un token: L'utilisateur n'a pas les droits de créer un token pour {invalid_api_list}", status='error', component='web', request_info=request.url)
+            return jsonify(success=False, message=f'You do not have permission to create tokens for: {invalid_api_list}')
 
         new_token = ApiToken(name=name, description=description, creator_id=context['user_id'], token_type='app')
         db.session.add(new_token)
@@ -298,9 +330,10 @@ def edit_token(token_id):
 
         invalid_apis = [api_id for api_id in selected_api_ids if api_id not in allowed_api_ids]
         if invalid_apis:
-            flash(f"Vous n'avez pas les droits pour mettre à jour un token pour {', '.join(invalid_apis)}", 'danger')
-            logs(f"Edition du token: L'utilisateur n'a pas les droits de mettre à jour un token pour {', '.join(invalid_apis)}", status='error', component='web', request_info=request.url)
-            return jsonify(success=False, message=f'You do not have permission to update tokens for: {', '.join(invalid_apis)}')
+            invalid_api_list = ', '.join(invalid_apis)
+            flash(f"Vous n'avez pas les droits pour mettre à jour un token pour {invalid_api_list}", 'danger')
+            logs(f"Edition du token: L'utilisateur n'a pas les droits de mettre à jour un token pour {invalid_api_list}", status='error', component='web', request_info=request.url)
+            return jsonify(success=False, message=f'You do not have permission to update tokens for: {invalid_api_list}')
 
         token.accessible_scripts = [] # Clear existing
         for api_id in selected_api_ids:
@@ -312,6 +345,57 @@ def edit_token(token_id):
     flash_notification(f"Token {name} mis à jour", 'success')
     logs(f"Token mis à jour", status='success', component='web', request_info=request.url)
     return jsonify(success=True, redirect_url=url_for('admin.dashboard_content'))
+
+@admin_bp.route('/token/<int:token_id>/environment-vars', methods=['GET'])
+@auth_required(required_roles=['admin', 'user'])
+def get_token_environment_vars_form(token_id):
+    token = ApiToken.query.get_or_404(token_id)
+    # Users can only edit their own tokens
+    context = construct_context()
+    if context['role'] == 'user' and token.creator_id != context['user_id']:
+        flash("Vous n'avez pas les permissions pour éditer les variables d'environnement de ce token", 'danger')
+        logs(f"Edition des variables d'environnement du token: L'utilisateur n'a pas les permissions pour éditer ce token", status='error', component='web', request_info=request.url)
+        return jsonify(success=False, message='You do not have permission to edit this token\'s environment variables.')
+
+    environment_vars = token.environment_vars if token.environment_vars else {}
+    return render_template('admin/modals/api_environment_vars_modal.html', script_id=token_id, environment_vars=environment_vars, modal_type="token")
+
+@admin_bp.route('/token/<int:token_id>/environment-vars', methods=['POST'])
+@auth_required(required_roles=['admin', 'user'])
+def save_token_environment_vars(token_id):
+    try:
+        token = ApiToken.query.get_or_404(token_id)
+        # Users can only edit their own tokens
+        context = construct_context()
+        if context['role'] == 'user' and token.creator_id != context['user_id']:
+            flash("Vous n'avez pas les permissions pour éditer les variables d'environnement de ce token", 'danger')
+            logs(f"Edition des variables d'environnement du token: L'utilisateur n'a pas les permissions pour éditer ce token", status='error', component='web', request_info=request.url)
+            return jsonify(success=False, message='You do not have permission to edit this token\'s environment variables.')
+
+        env_keys = request.form.getlist('env_keys[]')
+        env_values = request.form.getlist('env_values[]')
+        
+        new_environment_vars = {}
+        for i in range(len(env_keys)):
+            key = env_keys[i].strip()
+            value = env_values[i].strip()
+            if key: # Only add if key is not empty
+                new_environment_vars[key] = value
+        
+        token.environment_vars = new_environment_vars if new_environment_vars else None
+        
+        db.session.commit()
+        flash_notification(f"Variables d'environnements pour le token {token_id} mise à jour", 'success')
+        logs(f"Variables d'environnements pour le token {token_id} mise à jour", status='success', component='web')
+        
+        context = construct_context()
+        html = render_template('admin/partials/_api_tokens_table.html', **context)
+        return jsonify(success=True, html=html)
+
+    except Exception as e:
+        flash_notification(f"Erreur lors de la sauvegarde des variables d'environnements: {e}", 'danger')
+        logs(f"Erreur lors de la sauvegarde des variables d'environnements pour le token {token_id}: {e}", status='error', component='web')
+        return jsonify(success=False, message=f"Erreur lors de la sauvegarde des variables d'environnements: {e}")
 
 @admin_bp.route('/token/<int:token_id>/toggle', methods=['POST'])
 @auth_required(required_roles=['admin', 'user'])

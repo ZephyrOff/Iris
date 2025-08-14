@@ -46,7 +46,7 @@ def logs(message, status, component, user_id=None, request_info=None, result=Non
         user_id = None
 
     date = datetime.now().strftime("%Y/%m/%d - %H:%M:%S.%f")
-    print_date = f"{fg("dark_gray")}[{attr(0)}{fg("magenta")}{date}{attr(0)}{fg("dark_gray")}] - {attr(0)}"
+    print_date = f"{fg('dark_gray')}[{attr(0)}{fg('magenta')}{date}{attr(0)}{fg('dark_gray')}] - {attr(0)}"
 
     print_component = f"{fg('dark_gray')}[{attr(0)}{fg('yellow')}{component.upper()}{attr(0)}{fg('dark_gray')}] - {attr(0)}"
     print_component = f"{fg('dark_gray')}[{attr(0)}{fg(color)}{component.upper()}{attr(0)}{fg('dark_gray')}] - {attr(0)}"

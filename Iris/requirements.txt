@@ -1,0 +1,12 @@
+Flask
+Werkzeug
+Flask-SQLAlchemy
+SQLAlchemy
+PyJWT
+PyYAML
+zpp_store
+zpp_color
+requests
+cryptography
+pony
+zpp_store

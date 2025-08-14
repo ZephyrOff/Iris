@@ -12,6 +12,7 @@ from views.views import route_bp
 from core.protect import Fail2Ban
 from core.error import error_404
 from core.logging import CustomWerkzeugLogHandler
+from core.fabric import refresh_db # Import refresh_db
 import logging
 import zpp_store
     
@@ -47,7 +48,8 @@ class Backend():
         except OSError:
             pass
 
-        self.app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(self.app.instance_path, "hub.db")}'
+        self.db_file = self.app_settings.get("database.filename", False)
+        self.app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{os.path.join(self.app.instance_path, self.db_file)}'
         self.app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
         init_db(self.app)
@@ -149,7 +151,7 @@ class Backend():
     def run_server(self):
         # Ajoute ProxyFix
         from werkzeug.middleware.proxy_fix import ProxyFix
-        self.app.wsgi_app = ProxyFix(self.app.wsgi_app, x_for=1)
+        self.app.wsgi_app = ProxyFix(self.app.wsgi_app, x_for=1, x_host=1)
 
         if self.app_mode == "PROD":
             serve(self.app, host=self.server_address, port=self.port)

@@ -1,5 +1,5 @@
 server:
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 5000
 
   template_dir: templates
@@ -13,7 +13,7 @@ app:
 
   debug: False
 
-  auth: True
+  auth: False
   admin: True
   home: True
 
@@ -27,4 +27,4 @@ auto_protect:
 
 database:
   engine: sqlite
-  filename: app.db
+  filename: hub.db

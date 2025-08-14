@@ -1,7 +1,7 @@
 import __main__
 import time
 import ipaddress
-from flask import make_response, request
+from flask import make_response, request, jsonify
 from core.error import restricted_access_error
 from core.logging import logs
 
@@ -29,10 +29,11 @@ class Fail2Ban:
             if ip in self.ban_timestamps:
                 ban_start = self.ban_timestamps[ip]
                 if time.time() - ban_start < self.ban_time:
-                    print(self.failed_attempts)
-                    print(self.ban_timestamps)
                     logs(f"IP {ip} temporairement bloquée pour activité suspecte", status='info', component='system')
-                    return make_response("Votre IP est temporairement bloquée.", 403)
+                    if request.path.startswith('/api'):
+                         return jsonify({"error": "Votre accès est temporairement bloquée"}), 403
+                    else:
+                        return make_response("Votre accès est temporairement bloquée.", 403)
                 else:
                     # Déban automatique après expiration
                     del self.ban_timestamps[ip]
@@ -55,7 +56,10 @@ class Fail2Ban:
     def auto_protect(self):
         ip = self.get_client_ip()
         if self.is_ip_blacklisted(ip):
-            return make_response(restricted_access_error(), 403)
+            if request.path.startswith('/api'):
+                return jsonify({"error": "Votre accès est restreint pendant une durée indéterminée"}), 403
+            else:
+                return make_response(restricted_access_error(), 403)
 
         if not self.is_ip_whitelisted(ip):
             self.handle_failed_attempt(ip)

@@ -37,6 +37,14 @@
                             </svg>
                             Edit
                         </button>
+                        <button type="button" data-action="edit-environment-vars" data-script-id="{{ script.id }}"
+                           class="flex items-center font-semibold py-2 px-4 rounded-md
+                                  shadow-sm transition duration-300 ease-in-out transform hover:-translate-y-0.5 button-info button-env">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3a1 1 0 102 0V7zm-1 7a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                            </svg>
+                            Env Vars
+                        </button>
                         <form data-form-ajax data-update-target="api-scripts-table-wrapper" method="post" action="{{ url_for('admin.toggle_api_public_status', script_name=script.id) }}">
                             <button type="submit"
                                     class="flex items-center font-semibold py-2 px-4 rounded-md shadow-sm transition duration-300 ease-in-out transform hover:-translate-y-0.5 button-{{ 'private' if script.is_public else 'public' }}">

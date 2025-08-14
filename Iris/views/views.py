@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, jsonify, request, Response
 from models.database import ApiScript, User
 from views.utils import construct_context
 import os
+import sys
 import importlib
 import inspect
 import __main__
@@ -58,21 +59,28 @@ def api_details(script_name):
         logs(f"Accès au détail de l'api {script_name}", status='debug', component='web', request_info=request.url)
     
     context = construct_context()
+
+    context['access_url'] = f"{request.host_url}api/{script_name}"
     FABRIC_DIR = 'fabric'
 
     if '..' in script_name or '/' in script_name:
         logs(f'api inexistante pour afficher le détail', status='bad_request', component='web', request_info=request.url)
         return failed_api("Invalid script name", 400)
 
-    script_path = os.path.join(FABRIC_DIR, f"{script_name}.py")
-    if not os.path.exists(script_path):
-        logs(f'api inexistante pour afficher le détail', status='bad_request', component='web', request_info=request.url)
-        return failed_api("Script not found", 404)
-
     api_script = ApiScript.query.get(script_name)
     if not api_script:
         logs(f'api inexistante dans la base pour afficher le détail', status='bad_request', component='web', request_info=request.url)
         return failed_api("API not found in database", 404)
+    
+    if not api_script.path:
+        logs(f"chemin de l'api inexistante dans la base pour afficher le détail", status='bad_request', component='web', request_info=request.url)
+        return failed_api("API Path not found in database", 404)
+
+
+    script_path = os.path.join(FABRIC_DIR, api_script.path)
+    if not os.path.exists(script_path):
+        logs(f'api inexistante pour afficher le détail', status='bad_request', component='web', request_info=request.url)
+        return failed_api("Script not found", 404)
 
     # Security check
     if not api_script.is_public:
@@ -84,6 +92,9 @@ def api_details(script_name):
             return failed_api("Accès refusé", 403)
 
     try:
+        dir_path = os.path.dirname(script_path)
+        sys.path.append(dir_path)
+
         spec = importlib.util.spec_from_file_location(script_name, script_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
@@ -96,12 +107,14 @@ def api_details(script_name):
         
         if main_func is None:
             logs(f"Aucun @entrypoint trouvé pour {script_name}", status='error', component='web', request_info=request.url)
-            return jsonify({"error": f"No @entrypoint function found in {script_name}.py"}), 500
+            sys.path.remove(dir_path)
+            return jsonify({"error": f"No @entrypoint function found in {script_name}"}), 500
 
         parameters = []
         for name, param in inspect.signature(main_func).parameters.items():
             param_type = str(param.annotation) if param.annotation != inspect.Parameter.empty else "Any"
             parameters.append({"name": name, "type": param_type})
+        sys.path.remove(dir_path)
 
         return render_template('modals/api_details.html', script_name=script_name, parameters=parameters, api=api_script, **context)
 
