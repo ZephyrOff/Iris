@@ -42,6 +42,7 @@ def api_hub(script_name):
 
     token_str = None
     token_id = None
+    token = None
     try:
         if '..' in script_name or '/' in script_name:
             logs(f"Nom d'api invalide", status='bad_request', component='api', request_info=request.url, api_name=script_name)
